@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>	
+	<meta charset="utf-8" />
+	<title>Size calculator</title>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+	<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
+	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+	<script type="text/javascript">
+	// braSizes holds 
+	var braSizes = [
+					{
+						bandEU: 55,
+						bandUS: 22,
+						cupStart: 1,
+						cups: 	['DD', 'DDD', 'G', 'H', 'HH', 'J', 'K', 'L', 'M', 'N', 'O']
+					},
+					{
+						bandEU: 60,
+						bandUS: 24,
+						cupStart: 1,
+						cups: 	['D', 'DD', 'DDD', 'G', 'H', 'HH', 'J', 'K', 'L', 'M', 'N', 'O']
+					},
+					{
+						bandEU: 65,
+						bandUS: 26,
+						cupStart: 1,
+						cups: 	['C', 'D', 'DD', 'DDD', 'G', 'H', 'HH', 'J', 'K', 'L', 'M', 'N', 'O']
+					},
+					{
+						bandEU: 70,
+						bandUS: 28,
+						cupStart: 1,
+						cups: 	['B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'HH', 'J', 'K', 'L', 'M', 'N']
+					},
+					{
+						bandEU: 75,
+						bandUS: 30,
+						cupStart: 2,
+						cups: 	['B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'HH', 'J', 'K', 'L', 'M']
+					},
+					{
+						bandEU: 80,						
+						bandUS: 32,
+						cupStart: 3,
+						cups: 	['B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'HH', 'J', 'K', 'L']
+					},
+					{
+						bandEU: 85,
+						bandUS: 34,
+						cupStart: 4,
+						cups: 	['B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'HH', 'J', 'K']
+					},
+					{
+						bandEU: 90,
+						bandUS: 36,
+						cupStart: 5,
+						cups: 	['B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'HH', 'J']
+					},
+					{
+						bandEU: 95,
+						bandUS: 38,
+						cupStart: 6,
+						cups: 	['B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'HH']
+					},
+					{
+						bandEU: 100,
+						bandUS: 40,
+						cupStart: 7,
+						cups: 	['B', 'C', 'D', 'DD', 'DDD', 'G', 'H']
+					},
+					{
+						bandEU: 105,
+						bandUS: 42,
+						cupStart: 8,
+						cups: 	['B', 'C', 'D', 'DD', 'DDD', 'G']
+					},
+					{
+						bandEU: 110,
+						bandUS: 44,
+						cupStart: 9,
+						cups: 	['B', 'C', 'D', 'DD', 'DDD']
+					},
+					{
+						bandEU: 115,
+						bandUS: 46,
+						cupStart: 10,
+						cups: 	['B', 'C', 'D', 'DD']
+					},
+				];
+
+	var cups = ['A', 'B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'HH', 'J', 'K', 'L', 'M', 'N', 'O'];
+
+	function calculateCup(underbust, overbust){
+		var difference = Math.round(overbust - underbust);
+		if (difference < 1) {return "noCup"} else{
+			return cups[difference-1];
+		};
+	}
+
+	function calculateBand(underbust){
+		//assert underbust is an integer
+		if (underbust < 21 || underbust > 47) {return "noBand"} else{
+			if (underbust % 2 === 0) {return underbust} else {
+				//round down odd underbust measurement to the nearest band
+				return (underbust-1);
+			};	
+		};		
+	};
+
+	//check if we have this size, 
+	//assert typeOf(bandSize) == integer, typeOf(cupSize) == string
+	function sizeAvailable(bandSize,cupSize){
+		for (var i = 0; i < braSizes.length; i++) {
+				var band = braSizes[i];
+				if (band.bandUS === bandSize) {
+					for (var j = 0; j < band.cups.length; j++) {
+						var cup = band.cups[j];
+						if (cup === cupSize) {return true}
+					};
+				}; 				
+		};
+		return false;
+	};
+
+	//calculate snug size  from measurements
+	function calculateSize(underbust, overbust){
+		var bandSize = calculateBand(underbust);
+		var cupSize =  calculateCup(underbust, overbust);
+		//check if the size belongs to the universum of braSizes
+		if (sizeAvailable(bandSize, cupSize)) {return [bandSize,cupSize]} else{return "noSize"};
+	};
+
+	//find a sister size which feels loser
+	//assert typeOf(braSize) == array
+	function sisterLose (braSize) {
+		var sisterBand = braSize[0]+2;
+		var cupSize = braSize[1];
+		var cupIndex = cups.indexOf(cupSize)-1;
+		var sisterCup = cups[cupIndex];
+		//check if the size in braSizes
+		if (sizeAvailable(sisterBand,sisterCup)) {return([sisterBand,sisterCup])} else{return "noSister"};
+	}
+
+
+	$( document ).ready(function() {
+	//Calculate band size from input    	 		
+    	$('#calculateSize').click(function(){
+    		under = parseInt($('#underbust').val()); 
+    		over = parseInt($('#overbust').val());
+    		var yourSize = calculateSize(under,over);
+    		var yourSisterSize = sisterLose(yourSize);
+    		$('#size').text(yourSize[0]+yourSize[1]);	
+    		$('#sisterSize').text(yourSisterSize[0]+yourSisterSize[1]	);
+    	}); 		
+	});
+
+	</script>
+</head>
+<body>
+	<header>Size calculator</header>
+	Your underbust:	<input type="number" min="22" max="48" step="1" value="31" id="underbust"/>
+	<br>
+	Your overbust: <input type="number" min="23" max="59" step="1" value="41" id="overbust" />
+	<br>
+	<button id="calculateSize">Check your size</button>
+	Your size is: <span id="size"></span>
+	Your sister size that feels loser is <span id="sisterSize"></span>
+</body>
+</html>
