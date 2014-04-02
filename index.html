@@ -91,29 +91,52 @@
 
 	var cups = ['A', 'B', 'C', 'D', 'DD', 'DDD', 'G', 'H', 'HH', 'J', 'K', 'L', 'M', 'N', 'O'];
 
-	function calculateCup(underbust, overbust){
-		var difference = Math.round(overbust - underbust);
-		if (difference < 1) {return "noCup"} else{
-			return cups[difference-1];
-		};
-	}
+	//assert underbust, overbust type of number; unit in ["cm","in"]
+	function calculateCup(underbust, overbust, unit){
+			if (unit === "in") {
+				var difference = Math.round(overbust - underbust);
+				if (difference < 1) {return "noCup"} else{return cups[difference-1]};
+			};
+			if (unit === "cm") {
+				var difference = overbust - underbust;
+				if (difference < 2.54) {return "noCup"} else{
+					// 1 in = 2.54 cm
+					var cupIndex =  Math.round(difference/2.54)
+					return cups[cupIndex-1];
+			};
+		};		
+	};
 
-	function calculateBand(underbust){
-		//assert underbust is an integer
-		if (underbust < 21 || underbust > 47) {return "noBand"} else{
+	//assert underbust type of number, unit in ["cm","in"]
+	function calculateBand(underbust, unit){
+		if (unit === "in") {
+			//round the underbust down
+			underbust = Math.ceil(underbust);
 			if (underbust % 2 === 0) {return underbust} else {
 				//round down odd underbust measurement to the nearest band
 				return (underbust-1);
-			};	
-		};		
+			};			
+		};
+		if (unit === "cm") {
+			//round the underbust to integer
+			underbust = Math.round(underbust);
+			if (underbust%5 < 3) 
+				//round to the nearest multiple of 5
+				{var bandEU = (underbust - underbust%5)}
+			else
+				{var bandEU = (underbust - underbust%5 + 5)};
+			//convert EU band to US band
+			return (Math.ceil(bandEU/2.54))
+		};
 	};
 
 	//check if we have this size, 
 	//assert typeOf(bandSize) == integer, typeOf(cupSize) == string
+	//make sure there are now identical bandUS and bandEU in the braSizes object
 	function sizeAvailable(bandSize,cupSize){
 		for (var i = 0; i < braSizes.length; i++) {
 				var band = braSizes[i];
-				if (band.bandUS === bandSize) {
+				if (bandSize === band.bandUS || bandSize === band.bandEU) {
 					for (var j = 0; j < band.cups.length; j++) {
 						var cup = band.cups[j];
 						if (cup === cupSize) {return true}
@@ -123,10 +146,11 @@
 		return false;
 	};
 
-	//calculate snug size  from measurements
-	function calculateSize(underbust, overbust){
-		var bandSize = calculateBand(underbust);
-		var cupSize =  calculateCup(underbust, overbust);
+	//calculate size from measurements
+	//unit in ["cm","in"]
+	function calculateSize(underbust, overbust, unit){
+		var bandSize = calculateBand(underbust,unit);
+		var cupSize =  calculateCup(underbust, overbust, unit);
 		//check if the size belongs to the universum of braSizes
 		if (sizeAvailable(bandSize, cupSize)) {return [bandSize,cupSize]} else{return "noSize"};
 	};
@@ -140,18 +164,36 @@
 		var sisterCup = cups[cupIndex];
 		//check if the size in braSizes
 		if (sizeAvailable(sisterBand,sisterCup)) {return([sisterBand,sisterCup])} else{return "noSister"};
-	}
+	};
 
+	//find a sister size which feels more snug
+	//assert typeOf(braSize) == array
+	function sisterSnug (braSize){
+		var sisterBand = braSize[0]-2;
+		var cupSize = braSize[1];
+		var cupIndex = cups.indexOf(cupSize)+1;
+		var sisterCup = cups[cupIndex];
+		//check if the size in braSizes
+		if (sizeAvailable(sisterBand,sisterCup)) {return([sisterBand,sisterCup])} else{return "noSister"};
+	};
 
 	$( document ).ready(function() {
 	//Calculate band size from input    	 		
     	$('#calculateSize').click(function(){
     		under = parseInt($('#underbust').val()); 
     		over = parseInt($('#overbust').val());
-    		var yourSize = calculateSize(under,over);
-    		var yourSisterSize = sisterLose(yourSize);
-    		$('#size').text(yourSize[0]+yourSize[1]);	
-    		$('#sisterSize').text(yourSisterSize[0]+yourSisterSize[1]	);
+    		//pass unit from checkbox
+    		if ($('#metric').is(':checked')) {
+    			var yourSize = calculateSize(under,over,"cm");	
+    		} 
+    		else{
+    			var yourSize = calculateSize(under,over,"in");	
+    		};
+    		var snugSisterSize = sisterSnug(yourSize);
+    		var loseSisterSize = sisterLose(yourSize);
+    		$('#size0').text(yourSize[0]+yourSize[1]);	
+    		$('#size1').text(snugSisterSize[0]+snugSisterSize[1]);
+    		$('#size2').text(loseSisterSize[0]+loseSisterSize[1]);
     	}); 		
 	});
 
@@ -159,12 +201,16 @@
 </head>
 <body>
 	<header>Size calculator</header>
-	Your underbust:	<input type="number" min="22" max="48" step="1" value="31" id="underbust"/>
+	Show in cm: <input type="checkbox" value="1" id="metric">
 	<br>
-	Your overbust: <input type="number" min="23" max="59" step="1" value="41" id="overbust" />
+	Your underbust:	<input type="number" step="1" value="31" id="underbust"/>
+	<br>
+	Your overbust: <input type="number" step="1" value="41" id="overbust" />
 	<br>
 	<button id="calculateSize">Check your size</button>
-	Your size is: <span id="size"></span>
-	Your sister size that feels loser is <span id="sisterSize"></span>
+	<br>
+	Your size is: <span id="size0"></span><br>
+	Your SNUG sister size is: <span id="size1"></span>
+	Your LOSE sister size is: <span id="size2"></span>
 </body>
 </html>
